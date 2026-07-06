@@ -1,0 +1,156 @@
+fail_fast: true
+default_stages: [pre-commit]
+
+repos:
+  # ── Stage 1: Ruff (lint + fix) ──────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.0
+    hooks:
+      - id: ruff
+        name: 01-ruff-lint
+        args: [--fix, --exit-non-zero-on-fix]
+        stages: [pre-commit]
+
+  # ── Stage 2: Ruff Format Check ──────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.0
+    hooks:
+      - id: ruff-format
+        name: 02-ruff-format
+        stages: [pre-commit]
+
+  # ── Stage 3: detect-secrets ─────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: 03-detect-secrets
+        args: [--baseline, .secrets.baseline, --exclude-files, (uv\.lock|\.venv/|__pycache__/|\.git/)]
+        stages: [pre-commit]
+
+  # ── Stage 4: Semgrep ────────────────────────────────────────────
+  - repo: https://github.com/returntocorp/semgrep
+    rev: v1.119.0
+    hooks:
+      - id: semgrep
+        name: 04-semgrep
+        args:
+          [
+            "--config=./.semgrep/rules.yaml",
+            "--error",
+            "--no-autofix",
+            "--metrics=off",
+          ]
+        stages: [pre-commit]
+
+  # ── Stage 5: validate_project.py ─────────────────────────────────
+  - repo: local
+    hooks:
+      - id: validate-project
+        name: 05-validate-project
+        entry: uv run python scripts/validate_project.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+  # ── Stage 6: validate_workflow.py ────────────────────────────────
+  - repo: local
+    hooks:
+      - id: validate-workflow
+        name: 06-validate-workflow
+        entry: uv run python scripts/validate_workflow.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+  # ── Stage 7: validate_agents.py ──────────────────────────────────
+  - repo: local
+    hooks:
+      - id: validate-agents
+        name: 07-validate-agents
+        entry: uv run python scripts/validate_agents.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+  # ── Stage 8: validate_domain.py ──────────────────────────────────
+  - repo: local
+    hooks:
+      - id: validate-domain
+        name: 08-validate-domain
+        entry: uv run python scripts/validate_domain.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+  # ── Stage 9: validate_prompts.py ─────────────────────────────────
+  - repo: local
+    hooks:
+      - id: validate-prompts
+        name: 09-validate-prompts
+        entry: uv run python scripts/validate_prompts.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+  # ── Stage 10: validate_mcp.py ────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: validate-mcp
+        name: 10-validate-mcp
+        entry: uv run python scripts/validate_mcp.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+  # ── Stage 11: pytest (unit + validator + tool tests, fast) ──────
+  - repo: local
+    hooks:
+      - id: pytest-fast
+        name: 11-pytest-fast
+        entry: uv run pytest tests/unit -v --no-header -q -m "not integration and not e2e and not load"
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+  # ── Non-blocking formatting helpers (run after all gates) ───────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: trailing-whitespace
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        name: end-of-file-fixer
+        stages: [pre-commit]
+      - id: check-yaml
+        name: check-yaml
+        stages: [pre-commit]
+      - id: check-json
+        name: check-json
+        stages: [pre-commit]
+      - id: check-toml
+        name: check-toml
+        stages: [pre-commit]
+      - id: check-merge-conflict
+        name: check-merge-conflict
+        stages: [pre-commit]
+      - id: detect-private-key
+        name: detect-private-key
+        stages: [pre-commit]
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        name: codespell
+        args: ["--ignore-words-list", "rouge"]
+        exclude: "uv\\.lock|\\.venv"
+        stages: [pre-commit]

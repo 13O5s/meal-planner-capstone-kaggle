@@ -1,0 +1,90 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "healthy_weekly_plan",
+      "prompt": "I'm a 30-year-old male, 175cm, 70kg, moderately active. I want a healthy weekly meal plan with a daily calorie target of 2000 calories. I like chicken and vegetables, and I'm allergic to peanuts. My budget is $100 per week.",
+      "score": {
+        "score": 4,
+        "max_score": 5,
+        "reasons": [
+          "Agent called tools",
+          "Final response detailed (>50 chars)"
+        ],
+        "tool_call_count": 1,
+        "final_response_length": 2772,
+        "has_error": false
+      },
+      "event_count": 3
+    },
+    {
+      "eval_case_id": "high_protein_plan",
+      "prompt": "I need a high protein meal plan. I'm 25, female, 165cm, 60kg, active lifestyle. Target 1800 calories with 120g protein daily. I have no allergies, budget $80.",
+      "score": {
+        "score": 4,
+        "max_score": 5,
+        "reasons": [
+          "Agent called tools",
+          "Final response detailed (>50 chars)"
+        ],
+        "tool_call_count": 1,
+        "final_response_length": 1595,
+        "has_error": false
+      },
+      "event_count": 3
+    },
+    {
+      "eval_case_id": "budget_meals",
+      "prompt": "I want a budget-friendly meal plan. 35-year-old male, 180cm, 80kg, sedentary. Target 2200 calories. I only have $50 for the week. I dislike fish.",
+      "score": {
+        "score": 4,
+        "max_score": 5,
+        "reasons": [
+          "Agent called tools",
+          "Final response detailed (>50 chars)"
+        ],
+        "tool_call_count": 1,
+        "final_response_length": 1733,
+        "has_error": false
+      },
+      "event_count": 3
+    },
+    {
+      "eval_case_id": "weight_loss_plan",
+      "prompt": "Help me lose weight with a meal plan. I'm 40, female, 160cm, 75kg, light activity. Target 1500 calories. I'm vegetarian. Budget $60 weekly.",
+      "score": {
+        "score": 4,
+        "max_score": 5,
+        "reasons": [
+          "Agent called tools",
+          "Final response detailed (>50 chars)"
+        ],
+        "tool_call_count": 1,
+        "final_response_length": 2131,
+        "has_error": false
+      },
+      "event_count": 3
+    },
+    {
+      "eval_case_id": "quick_shopping_list",
+      "prompt": "I have chicken breast 500g, eggs 6, milk 1L, and rice 200g at home. What meals can I make? I want a daily plan for tomorrow. I'm 28, male, 170cm, 65kg, active. No allergies.",
+      "score": {
+        "score": 4,
+        "max_score": 5,
+        "reasons": [
+          "Agent called tools",
+          "Final response detailed (>50 chars)"
+        ],
+        "tool_call_count": 1,
+        "final_response_length": 1627,
+        "has_error": false
+      },
+      "event_count": 3
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "avg_score": 4.0,
+    "passed": 5,
+    "failed": 0
+  }
+}

@@ -1,0 +1,29 @@
+# =============================================================================
+# Cloud Build config — Build & push frontend image to Artifact Registry
+# =============================================================================
+# Triggered manually (or by CI) to:
+#   1. Build the Docker image with VITE_API_URL baked in
+#   2. Push it to Artifact Registry (us-east1)
+#
+# Substitution variables:
+#   $_VITE_API_URL — Required. Set it at build time, e.g.:
+#     gcloud builds submit --config=cloudbuild.yaml \
+#       --substitutions=_VITE_API_URL=https://meal-planner-api-XXXXXX.us-east1.run.app
+#
+#   $PROJECT_ID — Auto-filled by Cloud Build with the current GCP project ID
+# =============================================================================
+
+steps:
+  # Step 1: Build the Docker image using the Dockerfile in the repo root
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'VITE_API_URL=$_VITE_API_URL'          # <-- set this when triggering
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/meal-plan-ui'
+      - '.'                                      # build context = repo root
+
+# Push the image so Cloud Run can pull it during deployment
+images:
+  - 'us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/meal-plan-ui'

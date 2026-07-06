@@ -1,0 +1,350 @@
+rules:
+  # ================================================================
+  # GROUP A: Secrets Detection (ERROR)
+  # ================================================================
+  - id: google-api-key
+    pattern-regex: AIzaSy[A-Za-z0-9_-]{35}
+    message: >-
+      Hardcoded Google API key detected (finding: google-api-key).
+      Remediation: Store in .env as GOOGLE_API_KEY and read via os.getenv().
+      The Gemini SDK reads GOOGLE_API_KEY from the environment automatically.
+    severity: ERROR
+    languages: [python, json, yaml, sh]
+    paths:
+      exclude:
+        - "*.md"
+        - ".secrets.baseline"
+        - ".pre-commit-config.yaml"
+
+  - id: openai-api-key
+    pattern-regex: sk-[A-Za-z0-9]{32,}
+    message: >-
+      Hardcoded OpenAI API key detected (finding: openai-api-key).
+      Remediation: Store API keys in .env and read via os.getenv("OPENAI_API_KEY").
+    severity: ERROR
+    languages: [python, json, yaml]
+    paths:
+      exclude:
+        - ".secrets.baseline"
+
+  - id: anthropic-api-key
+    pattern-regex: sk-ant-[A-Za-z0-9]{32,}
+    message: >-
+      Hardcoded Anthropic API key detected (finding: anthropic-api-key).
+      Remediation: Store in .env and read via os.getenv("ANTHROPIC_API_KEY").
+    severity: ERROR
+    languages: [python, json, yaml]
+    paths:
+      exclude:
+        - ".secrets.baseline"
+
+  - id: aws-access-key
+    pattern-regex: AKIA[0-9A-Z]{16}
+    message: >-
+      Hardcoded AWS Access Key ID detected (finding: aws-access-key).
+      Remediation: Use IAM roles or environment variables for AWS credentials.
+    severity: ERROR
+    languages: [python, json, yaml, sh]
+    paths:
+      exclude:
+        - ".secrets.baseline"
+
+  - id: azure-connection-string
+    pattern-regex: (AccountKey|DefaultEndpointsProtocol|SharedAccessKey)=[A-Za-z0-9+/=]{20,}
+    message: >-
+      Hardcoded Azure connection string or key detected (finding: azure-connection-string).
+      Remediation: Use managed identities or environment variables.
+    severity: ERROR
+    languages: [python, json, yaml]
+    paths:
+      exclude:
+        - ".secrets.baseline"
+
+  - id: jwt-secret
+    pattern-regex: 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'
+    message: >-
+      Hardcoded JWT token detected (finding: jwt-secret).
+      Remediation: JWT secrets must be stored in environment variables,
+      never in source code.
+    severity: ERROR
+    languages: [python, json, yaml, sh]
+    paths:
+      exclude:
+        - "*.md"
+        - ".secrets.baseline"
+        - "tests/"
+
+  - id: hardcoded-password
+    pattern-regex: (password|passwd|pwd)\s*[:=]\s*['"][A-Za-z0-9!@#$%^&*()_+\-=\[\]{}|;:,.<>?]{4,}['"]
+    message: >-
+      Hardcoded password detected (finding: hardcoded-password).
+      Remediation: Passwords must never appear in source code.
+      Use environment variables or a secrets manager.
+    severity: ERROR
+    languages: [python, json, yaml]
+    paths:
+      exclude:
+        - ".secrets.baseline"
+        - "tests/"
+
+  - id: bearer-token
+    pattern-regex: (Bearer\s+[A-Za-z0-9_\-\.]{20,}|token\s*[:=]\s*['"][A-Za-z0-9_\-]{20,}['"])
+    message: >-
+      Hardcoded Bearer token or auth token detected (finding: bearer-token).
+      Remediation: Store tokens in .env and read via os.getenv("TOKEN_VAR").
+    severity: ERROR
+    languages: [python, json, yaml, sh]
+    paths:
+      exclude:
+        - ".secrets.baseline"
+
+  - id: private-key-pattern
+    pattern-regex: -----BEGIN\s(?:RSA\s)?PRIVATE\sKEY-----
+    message: >-
+      Private key block detected (finding: private-key-pattern).
+      Remediation: Private keys must never be committed. Use a secrets
+      manager or environment variables.
+    severity: ERROR
+    languages: [python, json, yaml]
+    paths:
+      exclude:
+        - ".secrets.baseline"
+
+  - id: service-account-key
+    pattern-regex: '"type":\s*"service_account"'
+    message: >-
+      Service account key JSON detected (finding: service-account-key).
+      Remediation: Use workload identity federation or environment-based
+      credentials instead of downloading service account keys.
+    severity: ERROR
+    languages: [json]
+    paths:
+      exclude:
+        - ".secrets.baseline"
+
+  # ================================================================
+  # GROUP B: Dangerous Python (ERROR)
+  # ================================================================
+  - id: dangerous-eval
+    pattern: eval($X)
+    message: >-
+      eval() allows arbitrary code execution (finding: dangerous-eval).
+      Remediation: Use ast.literal_eval() or a structured parser instead.
+    severity: ERROR
+    languages: [python]
+    fix: Use ast.literal_eval() or a structured parser instead of eval()
+
+  - id: dangerous-exec
+    pattern: exec($X)
+    message: >-
+      exec() allows arbitrary code execution (finding: dangerous-exec).
+      Remediation: Restructure the code to avoid dynamic execution.
+    severity: ERROR
+    languages: [python]
+    fix: Refactor to avoid dynamic code execution
+
+  - id: dangerous-pickle
+    patterns:
+      - pattern-either:
+          - pattern: pickle.loads($X)
+          - pattern: pickle.load($X)
+          - pattern: "cPickle.loads($X)"
+          - pattern: "cPickle.load($X)"
+    message: >-
+      pickle.loads/load deserializes arbitrary objects (finding: dangerous-pickle).
+      Remediation: Use a safe serialization format like JSON or
+      Pydantic model_validate_json().
+    severity: ERROR
+    languages: [python]
+    fix: Use json.loads() or Pydantic model_validate_json() instead of pickle
+
+  - id: dangerous-yaml-load
+    pattern: yaml.load($X)
+    message: >-
+      yaml.load() deserializes arbitrary objects (finding: dangerous-yaml-load).
+      Remediation: Use yaml.safe_load() instead of yaml.load().
+    severity: ERROR
+    languages: [python]
+    fix: Use yaml.safe_load() instead of yaml.load()
+
+  - id: dangerous-os-system
+    patterns:
+      - pattern-either:
+          - pattern: os.system($X)
+          - pattern: os.popen($X)
+    message: >-
+      os.system() and os.popen() execute shell commands (finding: dangerous-os-system).
+      Remediation: Use subprocess.run() with shell=False and a command list.
+    severity: ERROR
+    languages: [python]
+    fix: Use subprocess.run([...], shell=False) instead
+
+  - id: dangerous-subprocess-shell
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.Popen($X, shell=True)
+          - pattern: subprocess.run($X, shell=True)
+    message: >-
+      subprocess with shell=True is a command injection risk (finding: dangerous-subprocess-shell).
+      Remediation: Use shell=False and pass arguments as a list.
+    severity: ERROR
+    languages: [python]
+    fix: Use subprocess.run([...], shell=False) instead
+
+  - id: dangerous-request-with-verify-false
+    patterns:
+      - pattern-either:
+          - pattern: requests.$FUNC($X, verify=False)
+          - pattern: httpx.$FUNC($X, verify=False)
+    message: >-
+      HTTP request with SSL verification disabled (finding: dangerous-request-with-verify-false).
+      Remediation: Remove verify=False or set verify=True to enforce
+      TLS certificate validation.
+    severity: ERROR
+    languages: [python]
+    fix: Remove verify=False to enforce TLS validation
+
+  # ================================================================
+  # GROUP C: ADK Architecture Violations (ERROR)
+  # ================================================================
+  - id: adk-agent-direct-api-call
+    patterns:
+      - pattern-either:
+          - pattern: requests.$FUNC(...)
+          - pattern: httpx.$FUNC(...)
+          - pattern: aiohttp.$FUNC(...)
+    message: >-
+      Agents must not call external APIs directly (finding: adk-agent-direct-api-call).
+      All external communication must go through Tools or MCP servers.
+      Remediation: Move the API call to app/tools/ and import the tool function.
+    severity: ERROR
+    languages: [python]
+    paths:
+      include:
+        - "app/agents/*.py"
+    fix: Move the API call to a tool in app/tools/ and import it as a function reference
+
+  - id: adk-agent-gemini-client
+    pattern: google.genai.Client(...)
+    message: >-
+      Agents must not create Gemini clients directly (finding: adk-agent-gemini-client).
+      The ADK framework manages the model client.
+      Remediation: Remove direct Client() creation — ADK manages the model client.
+    severity: ERROR
+    languages: [python]
+    paths:
+      include:
+        - "app/agents/*.py"
+    fix: Remove direct Client() creation — ADK manages the model client
+
+  - id: adk-business-logic-in-coordinator
+    pattern-either:
+      - pattern: "def $FUNC(...):\n    ..."
+    message: >-
+      Business logic in app/agent.py is prohibited (finding: adk-business-logic-in-coordinator).
+      The coordinator should only import, instantiate, and wire agents.
+      Remediation: Move the function definition to app/tools/ or app/agents/.
+    severity: ERROR
+    languages: [python]
+    paths:
+      include:
+        - "app/agent.py"
+    fix: Move the function definition to app/tools/ or app/agents/
+
+  - id: adk-sql-concatenation
+    patterns:
+      - pattern-either:
+          - pattern: 'f"$SQL" + $X'
+          - pattern: '"$SQL" % $X'
+          - pattern: '"$SQL".format($X)'
+      - pattern-not: 'f"..."  # parameterized query placeholder'
+    message: >-
+      SQL string concatenation detected (finding: adk-sql-concatenation).
+      This is an injection risk.
+      Remediation: Use parameterized queries with the database driver's execute() method.
+    severity: ERROR
+    languages: [python]
+    fix: "Use parameterized queries: conn.execute('SELECT ... WHERE x = ?', [value])"
+
+  - id: adk-http-in-agent
+    patterns:
+      - pattern-either:
+          - pattern: "import requests"
+          - pattern: "import httpx"
+          - pattern: "import aiohttp"
+    message: >-
+      HTTP libraries must not be imported inside agent factory functions
+      (finding: adk-http-in-agent).
+      Remediation: Use Tools to make HTTP requests, then import the tool function.
+    severity: ERROR
+    languages: [python]
+    paths:
+      include:
+        - "app/agents/*.py"
+    fix: Remove HTTP import from agent file — use a Tool instead
+
+  - id: adk-raw-user-input-in-prompt
+    patterns:
+      - pattern-either:
+          - pattern: |
+              instruction="...{user_$X}..."
+          - pattern: |
+              system_instruction="...{user_$X}..."
+      - pattern-not: |
+          system_instruction="..."
+    message: >-
+      Raw user input should never be interpolated into prompts
+      (finding: adk-raw-user-input-in-prompt). This creates a prompt
+      injection vector.
+      Remediation: Pass user data through tool parameters, not prompt interpolation.
+    severity: ERROR
+    languages: [python]
+    fix: Pass user data through tool parameters, not prompt interpolation
+
+  - id: adk-hardcoded-api-key-in-code
+    pattern-regex: (api_key|apiKey|apikey)\s*=\s*['"][A-Za-z0-9_\-]{10,}['"]
+    message: >-
+      Hardcoded API key in Python code detected (finding: adk-hardcoded-api-key-in-code).
+      All API keys must be read from environment variables via os.getenv().
+      Remediation: Remove the hardcoded key and read from os.getenv("VARIABLE_NAME").
+    severity: ERROR
+    languages: [python]
+    paths:
+      exclude:
+        - ".secrets.baseline"
+        - "tests/"
+    fix: Remove the hardcoded key and read from os.getenv("VARIABLE_NAME")
+
+  - id: adk-agent-bypass-service
+    patterns:
+      - pattern-either:
+          - pattern: "boto3.$METHOD(...)"
+          - pattern: "google.cloud.$METHOD(...)"
+          - pattern: "azure.$METHOD(...)"
+    message: >-
+      Direct cloud SDK call bypassing approved service layer (finding: adk-agent-bypass-service).
+      All external service interactions must go through app/app_utils/services.py.
+      Remediation: Add the service call to app/app_utils/services.py and use it.
+    severity: ERROR
+    languages: [python]
+    paths:
+      include:
+        - "app/agents/*.py"
+        - "app/tools/*.py"
+    fix: Route external service calls through app/app_utils/services.py
+
+  - id: adk-agent-bypass-mcp
+    patterns:
+      - pattern-either:
+          - pattern: "requests.$FUNC(...)"
+          - pattern: "httpx.$FUNC(...)"
+    message: >-
+      Direct HTTP call that bypasses MCP servers (finding: adk-agent-bypass-mcp).
+      External API calls should go through MCP servers or registered tools.
+      Remediation: Create an MCP server definition or use a tool function.
+    severity: ERROR
+    languages: [python]
+    paths:
+      exclude:
+        - "app/tools/*.py"
+    fix: Route external calls through MCP servers or tool functions

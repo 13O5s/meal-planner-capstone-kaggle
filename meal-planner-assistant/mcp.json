@@ -1,0 +1,30 @@
+{
+  "mcp_servers": [
+    {
+      "name": "profile-mcp",
+      "transport": "stdio",
+      "command": "uv",
+      "args": ["run", "python", "-m", "mcp_servers.profile_mcp"],
+      "tools": ["save_profile", "get_profile", "validate_profile"],
+      "timeout": 30,
+      "retry": {
+        "max_retries": 2,
+        "backoff": "exponential",
+        "initial_delay": 1.0
+      }
+    },
+    {
+      "name": "inventory-mcp",
+      "transport": "stdio",
+      "command": "uv",
+      "args": ["run", "python", "-m", "mcp_servers.inventory_mcp"],
+      "tools": ["save_inventory", "get_inventory", "normalize_ingredient"],
+      "timeout": 30,
+      "retry": {
+        "max_retries": 2,
+        "backoff": "exponential",
+        "initial_delay": 1.0
+      }
+    }
+  ]
+}
