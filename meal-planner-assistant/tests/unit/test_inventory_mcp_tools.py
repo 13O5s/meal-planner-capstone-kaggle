@@ -1,4 +1,3 @@
-import pytest
 
 from mcp_servers.inventory_mcp.tools import (
     get_inventory,

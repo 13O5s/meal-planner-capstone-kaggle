@@ -1,9 +1,8 @@
 import pytest
 
-from app.data.stores import RECIPES, PRICE_DB, NUTRITION_DB
+from app.data.stores import NUTRITION_DB, PRICE_DB, RECIPES
 from app.models.schemas import NutritionInfo
 from app.tools.security_checkpoint import SecurityCheckpointResult
-
 
 # ═══════════════════════════════════════════
 # Data fixtures — basic
@@ -294,6 +293,7 @@ def agent_session(agent_session_service):
 @pytest.fixture
 def agent_runner(agent_session_service):
     from google.adk.runners import Runner
+
     from app.agent import root_agent
     return Runner(
         node=root_agent,

@@ -180,7 +180,7 @@ def _log(level: str, message: str) -> None:
 # - Step 2: Uses helper function `_validate_profile_field` to check numeric fields like age, height,
 #   weight, calorie target, budget, and meals per day, enforcing types and min/max constraints.
 # - Step 3: Compares `goal`, `activity_level`, and `gender` against predefined valid sets (enums).
-# - Step 4: Iterates through the list of `available_ingredients`. Ensures each item is a dict with 
+# - Step 4: Iterates through the list of `available_ingredients`. Ensures each item is a dict with
 #   required keys: 'name', 'quantity', and 'unit'.
 # - Step 5: Checks that ingredient quantity is numeric and non-negative.
 # - If any check fails, it logs validation errors, creates a "block" severity SecurityEvent,

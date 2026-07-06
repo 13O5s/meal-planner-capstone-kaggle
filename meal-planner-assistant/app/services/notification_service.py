@@ -92,12 +92,12 @@ class NotificationService:
         return result.scalar() or 0
 
     async def delete_old(self, days: int = 30) -> int:
-        from app.database.models.notification import Notification
-
         import datetime as dt
 
+        from app.database.models.notification import Notification
+
         cutoff = (
-            dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)
+            dt.datetime.now(dt.UTC) - dt.timedelta(days=days)
         ).strftime("%Y-%m-%dT%H:%M:%SZ")
         stmt = delete(Notification).where(Notification.created_at < cutoff)
         result = await self.session.execute(stmt)

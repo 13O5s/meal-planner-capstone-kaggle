@@ -1,4 +1,5 @@
 import pytest
+
 from app.tools.calculate_nutrition import calculate_recipe_nutrition
 
 

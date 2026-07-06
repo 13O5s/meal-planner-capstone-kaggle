@@ -1,5 +1,11 @@
 import pytest
-from app.tools.normalize_ingredients import normalize_ingredients, _parse_single_ingredient, _parse_fraction, _resolve_unit
+
+from app.tools.normalize_ingredients import (
+    _parse_fraction,
+    _parse_single_ingredient,
+    _resolve_unit,
+    normalize_ingredients,
+)
 
 
 class TestParseFraction:

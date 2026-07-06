@@ -1,4 +1,3 @@
-import pytest
 
 from mcp_servers.profile_mcp.tools import get_profile, save_profile, validate_profile
 

@@ -1,4 +1,5 @@
 import pytest
+
 from app.services.shopping_service import _build_available_map, _to_base_unit
 from app.tools.shopping_list import generate_optimized_shopping_list
 

@@ -1,4 +1,3 @@
-import pytest
 from app.tools.meal_plan_validator import validate_meal_plan
 
 

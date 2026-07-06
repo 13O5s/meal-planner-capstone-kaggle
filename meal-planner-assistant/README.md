@@ -1,242 +1,150 @@
-# 🥗 Agentic Meal Planner & Nutrition Assistant
+# 🥗 Agentic Meal Planner — Backend
 
-An intelligent, multi-agent meal planning coordinator built on **Google's Agent Development Kit (ADK) 2.0** and the **Model Context Protocol (MCP)**. This system helps users design customized, budget-conscious, allergen-safe weekly meal plans while tracking nutritional intake.
-
----
-
-## 📝 Short Description
-
-This project orchestrates a team of specialized AI sub-agents to guide users through collecting profile preferences, auditing stock ingredients, searching recipes, building allergen-free daily meal plans, and compiling cost-optimized shopping lists. A deterministic security checkpoint sits in front of all LLM steps to intercept prompt injections, redact PII, and validate outputs.
+Multi-agent meal planning coordinator built on **Google ADK 2.0**, **FastAPI**, and **PostgreSQL**. Generates personalized weekly meal plans with nutrition validation, budget tracking, and optimized shopping lists.
 
 ---
 
-## 🛠️ Technologies Used
+## 🛠️ Tech Stack
 
-*   **Core Logic**: Python 3.11+
-*   **Orchestration Framework**: Google Agent Development Kit (ADK 2.0)
-*   **Protocol Abstraction**: Model Context Protocol (MCP)
-*   **API & Web Service**: FastAPI
-*   **Database**: PostgreSQL / SQLAlchemy / Alembic migrations
-*   **External Integration**: FatSecret Platform API (OAuth 2.0 Client Credentials) for food & nutrition autocomplete lookup
-*   **Frontend**: React 19 + TypeScript 6 + Vite + Tailwind CSS
-*   **Environment & Dependencies**: `uv` package manager / `npm`
+- **Orchestration**: Google Agent Development Kit (ADK 2.0)
+- **API**: FastAPI + WebSockets + A2A protocol
+- **Database**: PostgreSQL / SQLAlchemy (async) / Alembic
+- **External APIs**: FatSecret Platform API (OAuth 2.0)
+- **Protocol**: Model Context Protocol (MCP) for data operations
 
 ---
 
-## 🏗️ Architecture & Workflow
+## 📁 Project Structure
 
-### Workflow Orchestration Graph
+```
+app/
+├── agents/           Sub-agents (profile, recipe, meal_plan)
+├── tools/            Deterministic tools (nutrition, validation, shopping)
+├── services/         Business logic layer
+├── database/
+│   ├── models/       8 ORM models → 20 tables
+│   ├── repositories/ Data access layer
+│   └── seeder.py     Initial data seeding
+├── data/stores.py    In-memory fallback (56 ingredients, 5 recipes)
+├── fast_api_app.py   FastAPI server (1644 lines)
+├── websocket_manager.py
+└── workflow_nodes.py Coordinator + function nodes
 
-The system uses a sequential DAG workflow driven by `app/agent.py`. The coordinator manages transitions, maintains session state, handles loops on budget exceedances, and enforces safety gates.
+mcp_servers/
+├── profile_mcp/      User profile CRUD tools
+└── inventory_mcp/    Ingredient normalization tools
 
-![alt text](image.png)
-
-### Components
-
-#### 1. Specialized Sub-Agents (`app/agents/`)
-*   **Profile Agent (`profile_agent`)**: Gathers demographics (age, height, weight), dietary restrictions, goals, and budget. Saves profiles to the database via MCP.
-*   **Inventory Agent (`inventory_agent`)**: Prompts the user for available ingredients and normalizes units/quantities.
-*   **Recipe Agent (`recipe_agent`)**: Queries and ranks recipes, excluding user allergens and prioritizing available ingredients.
-*   **Meal Plan Agent (`meal_plan_agent`)**: Allocates recipes into daily meal slots, aggregates nutritional targets, and adjusts portion sizes to meet targets.
-*   **Shopping Agent (`shopping_agent`)**: Combines duplicate ingredients, subtracts stock-on-hand, estimates costs, and flags budget gaps.
-
-#### 2. Model Context Protocol (MCP) Servers (`mcp_servers/`)
-Separating data operations from orchestration ensures loose coupling and high security:
-*   **`profile-mcp`**: Provides structured tools (`save_profile`, `get_profile`, `validate_profile`) to manipulate and validate user profiles.
-*   **`inventory-mcp`**: Exposes ingredient utilities (`save_inventory`, `get_inventory`, `normalize_ingredient`) for database resolution and stock management.
-
-#### 3. Security Guardrails (`app/tools/security_checkpoint.py`)
-A comprehensive, multi-phase verification pipeline:
-*   **Input Sanitization**: Rejects out-of-bound variables (e.g. age > 150) and negative quantities.
-*   **PII Redaction**: Recursively scans and masks emails, cards, phone numbers, and API keys.
-*   **Prompt-injection Filtering**: Identifies and blocks messages attempting instructions override, prompt leakage, or validation bypasses.
-*   **Allergen & Budget Gatekeeping**: Post-checks LLM outputs to guarantee that zero allergen ingredients exist in any recipe, and that caloric/macro requirements lie within a $\pm10\%$ tolerance.
+scripts/              Validation scripts (6) + local eval loop
+tests/
+├── unit/             10 unit tests
+├── integration/      4 integration tests
+├── load_test/        Locust load test
+└── eval/             ADK eval config + 5-case dataset
+```
 
 ---
 
 ## 📋 Prerequisites
 
-*   **Python**: `3.11` or higher.
-*   **Node.js**: `20` or higher (for the frontend).
-*   **uv**: Fast Python packaging tool. Install via:
-    ```bash
-    pip install uv
-    ```
-*   **agents-cli** (optional — `uv sync` is an alternative): CLI tool for ADK development. Install via:
-    ```bash
-    uv tool install google-agents-cli
-    ```
-*   **PostgreSQL** (optional — falls back to in-memory data stores if unavailable).
+- Python 3.11+
+- `uv` package manager (`pip install uv`)
+- `agents-cli` (optional — `uv sync` is alternative)
+- PostgreSQL (optional — falls back to in-memory)
 
 ---
 
-## 📦 Installation
+## 📦 Installation & Setup
 
-### 1. Clone the repository
 ```bash
-git clone <repo-url>
-cd meal-planner-assistant
-```
+# Install dependencies
+agents-cli install   # or: uv sync
 
-### 2. Install backend dependencies
-Pick **one** of the following:
-```bash
-agents-cli install
-# or (if agents-cli is not available):
-uv sync
-```
-
-### 3. Install frontend dependencies
-```bash
-cd ../meal-planner-ui
-npm install
-cd ../meal-planner-assistant
-```
-
-### 4. Set up environment variables
-```bash
+# Environment config
 cp .env.example .env
+# Then edit .env with your keys
 ```
-Then edit `.env` with your actual keys (see sections below).
 
----
+### Google Cloud Auth (Vertex AI mode only)
 
-## 🔧 Setup
-
-### 1. Google Cloud Authentication (Vertex AI mode only)
-
-If you are using **Vertex AI** (Mode B in `.env`), authenticate your local SDK:
 ```bash
 gcloud auth application-default login
 ```
 
-If you are using **Gemini API** (Mode A — `GOOGLE_API_KEY`), skip this step.
+### PostgreSQL (optional — in-memory fallback if skipped)
 
-### 2. PostgreSQL database
+```sql
+CREATE DATABASE meal_planner;
+```
 
-You can skip this section entirely — the app falls back to in-memory data if PostgreSQL is unavailable.
+Fill credentials in `.env`, then (optional) run migrations:
 
-To enable persistence:
-
-1. Install and start PostgreSQL if not already running.
-2. Create the database:
-   ```sql
-   CREATE DATABASE meal_planner;
-   ```
-3. Fill in your credentials in `.env`:
-   ```env
-   DB_HOST=127.0.0.1
-   DB_NAME=meal_planner
-   DB_USER=postgres
-   DB_PASSWORD=your_postgres_password
-   ```
-
-> **Note**: The app auto-creates all 20 tables and seeds initial data on startup (`Base.metadata.create_all` + `seed_database()`). Running Alembic migrations (step 4) is optional but recommended for schema versioning.
-
-### 3. FatSecret API Integration
-
-The Recipe Search Agent uses the FatSecret Platform API for ingredient verification and autocomplete suggestions.
-
-1. Sign up for a developer account at [FatSecret Platform API](https://platform.fatsecret.com).
-2. Create an API Application to obtain your **Client ID** and **Client Secret**.
-3. **Register your server IP address** — FatSecret requires IP whitelisting for OAuth 2.0 token requests:
-   - Go to [FatSecret Platform API Dashboard](https://platform.fatsecret.com) → **My Applications** → select your app → **Edit**
-   - Under **Allowed IP Addresses**, add:
-     - `127.0.0.1` (local development)
-     - Your server's public IP (staging/production)
-     - `0.0.0.0/0` (if deploying to Cloud Run with dynamic IPs — use with caution)
-   - Click **Save**. Without this step, token requests return HTTP 401.
-4. Configure the keys in `.env`:
-   ```env
-   FATSECRET_CLIENT_ID="your_client_id_here"
-   FATSECRET_CLIENT_SECRET="your_client_secret_here"
-   ```
-
-### 4. Run database migrations (optional)
-
-If you set up PostgreSQL, apply schema migrations:
 ```bash
 uv run alembic upgrade head
 ```
 
-### 5. Verify installation
+> The app auto-creates all 20 tables and seeds initial data on startup. Alembic is recommended for schema versioning.
 
-Run the test suite to confirm everything is wired correctly:
+### FatSecret API
+
+1. Sign up at [FatSecret Platform API](https://platform.fatsecret.com)
+2. Create an app → get Client ID + Client Secret
+3. **Register your IP**: Dashboard → My Applications → Edit → Allowed IP Addresses
+   - Add `127.0.0.1` (dev), your server IP (prod), or `0.0.0.0/0` (Cloud Run)
+4. Set `FATSECRET_CLIENT_ID` and `FATSECRET_CLIENT_SECRET` in `.env`
+
+### Verify
+
 ```bash
 uv run pytest tests/unit -v
-```
-
-Start the backend API and check the health endpoint:
-```bash
 uv run fastapi dev app/fast_api_app.py
-# In another terminal:
 curl http://localhost:8000/health
 ```
 
 ---
 
-## 🚀 How to Use & Running ADK
+## 🚀 Usage
 
-### 1. Launching Local Playground (Google ADK Console)
-You can interact with your agents directly inside the ADK playground using the following command:
-```bash
-agents-cli playground
-```
-This boots up an interactive console/playground where you can conversate with the coordinator agent, check session states, and test individual tool outputs.
-
-### 2. Launching with ADK CLI (`uv run adk`)
-Alternatively, you can interact with ADK features directly using:
-*   **Run Agent Coordinator**:
-    ```bash
-    uv run adk run meal_planner_workflow
-    ```
-*   **List ADK workflows**:
-    ```bash
-    uv run adk list
-    ```
-
-### 3. Starting the Backend API Web Server
-Start the FastAPI server for external clients (like frontend UIs) to communicate via WebSockets or HTTP endpoints:
-```bash
-uv run fastapi dev app/fast_api_app.py
-```
-
-Start the frontend dev server (in a separate terminal):
-```bash
-cd ../meal-planner-ui
-npm run dev
-```
-
-### Running Tests & Validation
-*   **Run all tests**:
-    ```bash
-    uv run pytest
-    ```
-*   **Run unit tests only**:
-    ```bash
-    uv run pytest tests/unit -v
-    ```
-*   **Validate MCP Server Integrity**:
-    ```bash
-    uv run python scripts/validate_mcp.py
-    ```
+| Command | Description |
+|---------|-------------|
+| `agents-cli playground` | Interactive ADK agent console |
+| `uv run fastapi dev app/fast_api_app.py` | Start backend API (port 8000) |
+| `uv run adk run meal_planner_workflow` | Run agent via ADK CLI |
+| `uv run pytest` | Run all tests |
+| `uv run python scripts/validate_mcp.py` | Validate MCP server integrity |
 
 ---
 
-## 🔒 Security Best Practices
-*   **Service Layer Separation**: HTTP requests (`requests`, `httpx`, `aiohttp`) are strictly forbidden inside agents and tools. All external API operations must route through the MCP servers or dedicated service layers.
-*   **Security Gates**: Every LLM node is wrapped with a security gate function that verifies input payloads and strips out any PII.
-*   **Allergen Checks**: The output validation step enforces a zero-tolerance policy against ingredient matches found in the user's registered allergy list.
+## 🏗️ Agent Architecture
+
+```
+Coordinator Agent
+├── Profile Agent        → save_profile tool
+├── Recipe Agent         → search_recipes, calculate_recipe_nutrition
+├── Meal Plan Agent      → validate_meal_plan
+├── inventory_fn         → normalize_ingredients (deterministic)
+├── shopping_fn          → generate_optimized_shopping_list (deterministic)
+├── budget_feedback_fn   → RequestInput (human-in-the-loop)
+└── done_fn              → Terminates workflow
+```
+
+Session state (`user_profile`, `available_ingredients`, `selected_recipes`, `meal_plan`, `shopping_list`) is the only communication channel between steps.
 
 ---
 
-## 🤝 Contribution Guidelines
-We welcome contributions! Please follow these guidelines:
-1. Fork the repository.
-2. Create a feature branch: `git checkout -b feature/your-feature`.
-3. Add pytest test cases for new logic and ensure all existing checks pass:
-   ```bash
-   uv run pytest
-   ```
-4. Perform linting and formatting verification.
-5. Open a Pull Request detailing the problem and your solution.
+## 🔒 Security
+
+- **MCP isolation**: External HTTP calls are forbidden inside agents — all data ops route through MCP servers
+- **Input validation**: Rejects out-of-bound values, negative quantities
+- **PII redaction**: Scans and masks emails, phones, API keys
+- **Allergen gatekeeping**: Zero-tolerance post-check on generated meal plans
+- **Macro validation**: ±10% tolerance against user targets
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repo
+2. Create a feature branch
+3. Add tests and ensure all pass: `uv run pytest`
+4. Run lint: `uv run ruff check .`
+5. Open a PR

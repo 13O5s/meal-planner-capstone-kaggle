@@ -19,6 +19,7 @@ import os
 import time
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC
 from urllib.parse import quote_plus
 
 import google.auth
@@ -294,8 +295,8 @@ async def get_recipes():
 @app.get("/api/ingredients")
 async def get_ingredients():
     from app.data.stores import NUTRITION_DB, PRICE_DB
-    from app.services.ingredient_service import IngredientService
     from app.services.helper import optional_session
+    from app.services.ingredient_service import IngredientService
 
     async with optional_session() as session:
         service = IngredientService(session)
@@ -489,8 +490,9 @@ async def login(data: dict):
 
 @app.get("/api/profile/{user_id}")
 async def get_profile(user_id: str):
-    from app.database.session import is_db_initialized
     import uuid
+
+    from app.database.session import is_db_initialized
 
     if is_db_initialized():
         from app.database.repositories.user_repo import UserRepository
@@ -527,8 +529,8 @@ async def save_profile(data: dict):
         return {"success": False, "error": "user_id required"}
 
     if is_db_initialized():
-        from app.services.profile_service import ProfileService
         from app.services.helper import optional_session
+        from app.services.profile_service import ProfileService
 
         async with optional_session() as session:
             service = ProfileService(session)
@@ -555,10 +557,11 @@ async def save_profile(data: dict):
 
 @app.get("/api/history/{user_id}")
 async def get_history(user_id: str):
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta
+
     from app.database.session import is_db_initialized
 
-    cut_off = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    cut_off = (datetime.now(UTC) - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     if is_db_initialized():
         return await _get_history_db(user_id, cut_off)
@@ -566,11 +569,12 @@ async def get_history(user_id: str):
 
 
 def _get_history_memory(user_id: str, cut_off: str) -> list[dict]:
-    from datetime import datetime, timezone
-    from app.data.stores import MEAL_PLANS, SHOPPING_LISTS, SHOPPING_ITEMS
+    from datetime import datetime
+
+    from app.data.stores import MEAL_PLANS, SHOPPING_ITEMS, SHOPPING_LISTS
 
     entries: list[dict] = []
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now_str = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Meal plans: created before now AND within 30 days
     plans = MEAL_PLANS.get(user_id, [])
@@ -621,13 +625,15 @@ def _get_history_memory(user_id: str, cut_off: str) -> list[dict]:
 
 
 async def _get_history_db(user_id: str, cut_off: str) -> list[dict]:
-    from datetime import datetime, timezone
-    from app.database.session import get_session
-    from app.database.models.saved_plan import SavedPlan
-    from app.database.models.saved_shopping import SavedShoppingList, SavedShoppingItem
-    from sqlalchemy import select, delete
+    from datetime import datetime
 
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from sqlalchemy import delete, select
+
+    from app.database.models.saved_plan import SavedPlan
+    from app.database.models.saved_shopping import SavedShoppingItem, SavedShoppingList
+    from app.database.session import get_session
+
+    now_str = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     entries: list[dict] = []
 
     async with get_session() as session:
@@ -810,9 +816,10 @@ def _plan_from_db(row) -> dict:
 
 
 async def _get_plans_from_db(user_id: str) -> list[dict]:
-    from app.database.session import get_session
-    from app.database.models.saved_plan import SavedPlan
     from sqlalchemy import select
+
+    from app.database.models.saved_plan import SavedPlan
+    from app.database.session import get_session
 
     async with get_session() as session:
         result = await session.execute(
@@ -822,8 +829,8 @@ async def _get_plans_from_db(user_id: str) -> list[dict]:
 
 
 async def _save_plan_to_db(user_id: str, plan: dict) -> None:
-    from app.database.session import get_session
     from app.database.models.saved_plan import SavedPlan
+    from app.database.session import get_session
 
     async with get_session() as session:
         db_plan = SavedPlan(**_plan_to_db(user_id, plan))
@@ -832,9 +839,10 @@ async def _save_plan_to_db(user_id: str, plan: dict) -> None:
 
 
 async def _update_plan_in_db(plan_id: str, data: dict) -> bool:
-    from app.database.session import get_session
-    from app.database.models.saved_plan import SavedPlan
     from sqlalchemy import update
+
+    from app.database.models.saved_plan import SavedPlan
+    from app.database.session import get_session
 
     async with get_session() as session:
         upd = {k: v for k, v in data.items() if k not in ("id", "user_id")}
@@ -851,9 +859,10 @@ async def _update_plan_in_db(plan_id: str, data: dict) -> bool:
 
 
 async def _delete_plan_from_db(plan_id: str) -> bool:
-    from app.database.session import get_session
-    from app.database.models.saved_plan import SavedPlan
     from sqlalchemy import delete
+
+    from app.database.models.saved_plan import SavedPlan
+    from app.database.session import get_session
 
     async with get_session() as session:
         stmt = delete(SavedPlan).where(SavedPlan.id == plan_id)
@@ -1137,9 +1146,10 @@ def _ingredients_from_plan(plan: dict) -> list[dict]:
 
 
 async def _save_shopping_list_db(user_id: str, plan_id: str, items: list[dict]) -> dict:
-    from app.database.session import get_session
-    from app.database.models.saved_shopping import SavedShoppingItem, SavedShoppingList
     from sqlalchemy import delete, select
+
+    from app.database.models.saved_shopping import SavedShoppingItem, SavedShoppingList
+    from app.database.session import get_session
 
     list_id = uuid.uuid4().hex[:8]
     created_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -1318,9 +1328,10 @@ async def apply_shopping_list(user_id: str, plan_id: str, data: dict = {}):
 
 
 async def _get_shopping_list_db(user_id: str) -> dict | None:
-    from app.database.session import get_session
-    from app.database.models.saved_shopping import SavedShoppingItem, SavedShoppingList
     from sqlalchemy import select
+
+    from app.database.models.saved_shopping import SavedShoppingItem, SavedShoppingList
+    from app.database.session import get_session
 
     async with get_session() as session:
         result = await session.execute(
@@ -1382,9 +1393,10 @@ async def get_shopping_list(user_id: str):
 
 
 async def _toggle_item_db(item_id: str) -> dict | None:
-    from app.database.session import get_session
-    from app.database.models.saved_shopping import SavedShoppingItem
     from sqlalchemy import select, update
+
+    from app.database.models.saved_shopping import SavedShoppingItem
+    from app.database.session import get_session
 
     async with get_session() as session:
         result = await session.execute(select(SavedShoppingItem).where(SavedShoppingItem.id == item_id))

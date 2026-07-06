@@ -1,15 +1,13 @@
-import copy
-import pytest
 from app.tools.security_checkpoint import (
-    validate_input,
-    sanitize_sensitive_data,
     detect_prompt_injection,
+    run_security_checkpoint,
+    sanitize_sensitive_data,
     validate_business_rules,
+    validate_input,
     validate_inventory,
     validate_output,
-    run_security_checkpoint,
 )
-from tests.conftest import assert_security_passed, assert_security_blocked
+from tests.conftest import assert_security_blocked, assert_security_passed
 
 
 class TestValidateInput:

@@ -1,5 +1,6 @@
 import pytest
-from app.tools.cost_estimator import estimate_grocery_cost, _calculate_cost
+
+from app.tools.cost_estimator import _calculate_cost, estimate_grocery_cost
 
 
 class TestCalculateCost:
